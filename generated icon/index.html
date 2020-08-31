@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Add an animated icon to the map</title>
+        <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+        <script src='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js'></script>
+        <link href='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css' rel='stylesheet' />
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+    <body>
+        <div id='map' style='width: 100vw; height: 100vh;'></div>
+
+        <script>
+            mapboxgl.accessToken = 'pk.eyJ1Ijoic2h1Z2dpbnMiLCJhIjoiY2tlYWxlbHA4MDFyMTJ0cGIzaThrZTVqaiJ9.9e8LB6gq505EZvM6BGFYmA';
+            var map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+            });
+
+            map.on('load', function() {
+                let width = 64; //64 pixel square
+                let bytesPerPixel = 4; //8-bit color
+                var data = new Uint8Array(width * width * bytesPerPixel); //pixels * bytes per pixel
+
+                for (var x = 0; x < width; x++) {
+                    for (var y = 0; y < width; y++) {
+                        //generate image
+                        var offset = (y * width + x) * bytesPerPixel;
+                        data[offset + 0] = (y / width) * 255; //red
+                        data[offset + 1] = (x / width) * 255; //green
+                        data[offset + 2] = 128; //blue
+                        data[offset + 3] = 255; //alpha
+                    }
+                }
+
+                //add generated image with color data
+                map.addImage('gradient', {width: width, height: width, data: data});
+
+                map.addSource('point', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'FeatureCollection',
+                        'features': [
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-122, 49]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [0, 0]
+                                }
+                            }
+                        ]
+                    }
+                });
+
+                map.addLayer({
+                    'id': 'points',
+                    'type': 'symbol',
+                    'source': 'point',
+                    'layout': {
+                        'icon-image': 'gradient'
+                    }
+                });
+            });
+
+        </script>
+
+    </body>
+</html>

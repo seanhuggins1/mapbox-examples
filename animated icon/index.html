@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Add an animated icon to the map</title>
+        <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+        <script src='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js'></script>
+        <link href='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css' rel='stylesheet' />
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+    <body>
+        <div id='map' style='width: 100vw; height: 100vh;'></div>
+
+        <script>
+            mapboxgl.accessToken = 'pk.eyJ1Ijoic2h1Z2dpbnMiLCJhIjoiY2tlYWxlbHA4MDFyMTJ0cGIzaThrZTVqaiJ9.9e8LB6gq505EZvM6BGFYmA';
+            var map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+            });
+            var size = 200;
+
+
+
+            //implementing a CustomLayerInterface to draw a pulsing dot icon on the map
+            var pulsingDot = {
+                width: size,
+                height: size,
+                data: new Uint8Array(size * size * 4),
+
+                //* what is a context? (requires learning HTML canvas)
+                //* what is 'this' in this case A: clearly belongs to the object pulsingDot
+                //* difference between var & let
+                onAdd: function() {
+                    var canvas = document.createElement('canvas');  //create a canvas
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    this.context = canvas.getContext('2d');
+                },
+
+                //called once before every frame where the icon will be used
+                render: function() {
+                    var duration = 1000;
+                    var t = (performance.now() % duration) / duration;
+                    
+                    var radius = (size / 2) * 0.3;  //inner 'static' circle
+                    var outerRadius = (size / 2) * 0.7 * t + radius;    //outer 'pulsing' circle
+                    var context = this.context;
+
+                    //draw outer 'pulsing' circle
+                    context.clearRect(0,0,this.width,this.height);
+                    context.beginPath();
+                    context.arc(
+                        this.width / 2,
+                        this.height / 2,    //arc center
+                        outerRadius,    //radius
+                        0,              //*?
+                        Math.PI * 2     //arc angle
+                    );
+                    context.fillStyle = 'rgba(255,200,200,' + (1 - t) + ')';    //creates fading circle
+                    context.fill(); //fills circle
+
+                    //draw inner 'static' circle
+                    context.beginPath();
+                    context.arc(
+                        this.width / 2,
+                        this.height / 2,
+                        radius,
+                        0,
+                        Math.PI * 2
+                    );
+                    context.fillStyle = 'rgba(255,100,100,1)';
+                    context.strokeStyle = 'white';  //creates white border on inner circle
+                    context.lineWidth = 2 + 4 * (1 - t); //white border also pulses
+                    context.fill(); //fills circle
+                    context.stroke();   //draws stroke
+
+
+
+
+                    //finally update this image's data with the data from the canvas
+                    //* not sure what this does honestly
+                    this.data = context.getImageData(
+                        0,
+                        0,
+                        this.width,
+                        this.height
+                    ).data;
+
+                    //continuously repaint map
+                    map.triggerRepaint();   //triggers rendering
+
+                    //return true, lets the map know that the image was updated
+                    return true;
+                }
+
+            };
+
+
+            //*need to look into map methods
+            map.on('load', function() {
+                map.addImage('pulsing-dot', pulsingDot, {pixelRatio: 2});
+                map.addSource('points', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'FeatureCollection',
+                        'features': [
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [0,0]
+                                }
+                            }
+                        ]
+                    }
+                });
+                //finally add the layer
+                map.addLayer({
+                    'id': 'points',
+                    'type': 'symbol',
+                    'source': 'points',
+                    'layout': {
+                        'icon-image': 'pulsing-dot'
+                    }
+                });
+            });
+
+        </script>
+
+    </body>
+</html>
